@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   addInterval,
   monthlyEquivalent,
@@ -8,9 +8,9 @@ import {
   parseHue,
 } from "./lib/utils.js";
 
-function Editor({ form, set, onCancel, inputClass }) {
+function Editor({ form, set, onCancel, onSubmit, inputClass }) {
   return (
-    <form>
+    <form onSubmit={onSubmit}>
       <label className="text-sm col-span-2">
         Next due
         <input
@@ -56,6 +56,7 @@ function TableView({
   onDelete,
   onMarkPaid,
   onAdd,
+  onEdit,
   inputClass,
 }) {
   return (
@@ -184,6 +185,12 @@ function TableView({
                   <td className="px-3 py-2">
                     <div className="flex gap-2">
                       <button
+                        onClick={() => onEdit(r.id)}
+                        className="px-2 py-1 rounded-lg bg-neutral-700"
+                      >
+                        Edit
+                      </button>
+                      <button
                         onClick={() => onMarkPaid(r.id)}
                         className="px-2 py-1 rounded-lg bg-white text-neutral-900"
                       >
@@ -277,5 +284,89 @@ function runSelfTests() {
 
 export default function App() {
   runSelfTests();
-  return <div />;
+
+  const today = new Date().toISOString().slice(0, 10);
+
+  const [rows, setRows] = useState(() => {
+    try {
+      const stored = localStorage.getItem("rows");
+      return stored ? hydrate(JSON.parse(stored)) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [editing, setEditing] = useState(null);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("rows", JSON.stringify(dehydrate(rows)));
+    } catch {}
+  }, [rows]);
+
+  const rowsWithDays = useMemo(
+    () =>
+      rows.map((r) => ({
+        ...r,
+        daysLeft: daysBetween(today, r.nextDue),
+      })),
+    [rows, today],
+  );
+
+  const updateRow = (id, changes) => {
+    setRows((rs) => rs.map((r) => (r.id === id ? { ...r, ...changes } : r)));
+  };
+  const deleteRow = (id) => {
+    setRows((rs) => rs.filter((r) => r.id !== id));
+  };
+  const markPaid = (id) => {
+    setRows((rs) =>
+      rs.map((r) =>
+        r.id === id
+          ? { ...r, nextDue: addInterval(r.nextDue, r.cycle, r.intervalDays) }
+          : r,
+      ),
+    );
+  };
+  const addRow = () => {
+    setRows((rs) => [...rs, normalizeItem({ name: "New", amount: 0 })]);
+  };
+
+  const editRow = (id) => {
+    const r = rows.find((x) => x.id === id);
+    if (r) setEditing({ ...r });
+  };
+  const setField = (field, value) => {
+    setEditing((f) => ({ ...f, [field]: value }));
+  };
+  const cancelEdit = () => setEditing(null);
+  const saveEdit = (e) => {
+    e.preventDefault();
+    if (editing) updateRow(editing.id, editing);
+    setEditing(null);
+  };
+
+  return (
+    <div className="p-4 flex flex-col gap-6">
+      <TableView
+        rows={rowsWithDays}
+        currency="$"
+        lookahead={30}
+        onChange={updateRow}
+        onDelete={deleteRow}
+        onMarkPaid={markPaid}
+        onAdd={addRow}
+        onEdit={editRow}
+        inputClass="bg-neutral-800"
+      />
+      {editing && (
+        <Editor
+          form={editing}
+          set={setField}
+          onCancel={cancelEdit}
+          onSubmit={saveEdit}
+          inputClass="bg-neutral-800"
+        />
+      )}
+    </div>
+  );
 }
