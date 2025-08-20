@@ -3,6 +3,7 @@
 // Single-file React component. Tailwind for styling.
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import ShaderBubbleView from "./lib/ShaderBubbleView.jsx";
 
 /******************** Utilities ********************/
 function daysBetween(a, b) {
@@ -86,7 +87,7 @@ export default function SubscriptionBubbleTracker(){
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState("all"); // all | overdue | autopay | manual
   const [sortBy, setSortBy] = useState("due"); // due | amount | name
-  const [view, setView] = useState("bubbles"); // bubbles | table
+  const [view, setView] = useState("bubbles"); // bubbles | table | shader
   const [items, setItems] = useState(() => {
     const raw = localStorage.getItem(STORAGE_KEY);
     if(!raw) return hydrate(SAMPLE);
@@ -148,6 +149,7 @@ export default function SubscriptionBubbleTracker(){
             <div className="inline-flex p-1 rounded-2xl bg-neutral-800 ring-1 ring-white/10">
               <button onClick={()=>setView('bubbles')} className={`px-3 py-1.5 rounded-xl text-sm font-medium ${view==='bubbles'?'bg-white text-neutral-900':'text-neutral-300 hover:text-white'}`}>Bubbles</button>
               <button onClick={()=>setView('table')} className={`px-3 py-1.5 rounded-xl text-sm font-medium ${view==='table'?'bg-white text-neutral-900':'text-neutral-300 hover:text-white'}`}>Table</button>
+              <button onClick={()=>setView('shader')} className={`px-3 py-1.5 rounded-xl text-sm font-medium ${view==='shader'?'bg-white text-neutral-900':'text-neutral-300 hover:text-white'}`}>Shader</button>
             </div>
             <button onClick={()=>{setEditing(null); setShowForm(true);}} className="px-3 py-2 rounded-2xl bg-white text-neutral-900 text-sm font-medium shadow hover:shadow-md transition">Add Subscription</button>
             <label className="px-3 py-2 rounded-2xl bg-neutral-800 text-sm cursor-pointer hover:bg-neutral-700 transition">Import JSON<input type="file" onChange={handleImport} accept="application/json" className="hidden"/></label>
@@ -177,6 +179,10 @@ export default function SubscriptionBubbleTracker(){
                     />
                   );
                 })}
+              </div>
+            ) : view==='shader' ? (
+              <div ref={ref} className="relative h-[56vh] min-h-[420px] rounded-3xl bg-neutral-900/70 ring-1 ring-white/10 overflow-hidden">
+                <ShaderBubbleView items={filtered} pos={pos} size={size} amountToRadius={amountToRadius} />
               </div>
             ) : (
               <TableView
