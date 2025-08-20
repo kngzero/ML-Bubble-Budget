@@ -119,7 +119,17 @@ export default function SubscriptionBubbleTracker(){
 
   // Radius mapping
   const ref = useRef(null); const [size, setSize] = useState({w: 800, h: 520});
-  useEffect(()=>{ if(!ref.current) return; const ro=new ResizeObserver(es=>{ for(const e of es){ const c=e.contentRect; setSize({w:c.width, h:Math.max(380,c.height)}); } }); ro.observe(ref.current); return ()=>ro.disconnect(); },[]);
+  useEffect(() => {
+    if (view !== 'bubbles' || !ref.current) return;
+    const ro = new ResizeObserver(es => {
+      for (const e of es) {
+        const c = e.contentRect;
+        setSize({ w: c.width, h: Math.max(380, c.height) });
+      }
+    });
+    ro.observe(ref.current);
+    return () => ro.disconnect();
+  }, [view, ref.current]);
   function amountToRadius(v){ const {min,max}=amountRange; const rMin=28, rMax=Math.min(140, Math.floor(Math.min(size.w,size.h)*0.28)); if(max===min) return (rMin+rMax)/2; return rMin + (rMax-rMin)*((v-min)/(max-min)); }
   const layoutInput = useMemo(()=> filtered
     .sort((a,b)=> sortBy==='amount' ? b.amount-a.amount : sortBy==='name' ? a.name.localeCompare(b.name) : a.daysLeft-b.daysLeft)
