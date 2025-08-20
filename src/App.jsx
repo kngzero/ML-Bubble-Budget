@@ -210,9 +210,14 @@ function TableView({
 }
 
 // Helpers used here (kept local for simplicity)
+function fallbackId() {
+  return (
+    Date.now().toString(36) + Math.random().toString(36).slice(2)
+  );
+}
 function normalizeItem(x) {
   return {
-    id: x.id || crypto.randomUUID(),
+    id: x.id || (globalThis.crypto?.randomUUID?.() ?? fallbackId()),
     name: x.name,
     amount: Number(x.amount || 0),
     cycle: x.cycle || "monthly",
