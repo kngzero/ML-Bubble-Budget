@@ -19,6 +19,13 @@ describe("utils", () => {
     expect(y === "2025-02-28" || y.startsWith("2025-02")).toBe(true);
     expect(addInterval("2025-01-01", "custom", 10)).toBe("2025-01-11");
   });
+  it("addInterval yearly handles leap years in different timezones", () => {
+    const prev = process.env.TZ;
+    process.env.TZ = "America/New_York";
+    const y = addInterval("2024-02-29", "yearly");
+    expect(y).toBe("2025-02-28");
+    process.env.TZ = prev;
+  });
   it("monthlyEquivalent conversions", () => {
     expect(Math.abs(monthlyEquivalent(10, "weekly") - 43.4524)).toBeLessThan(
       1e-6,
