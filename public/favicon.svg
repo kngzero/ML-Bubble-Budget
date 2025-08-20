@@ -1,5 +1,22 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-<circle cx="32" cy="32" r="28" fill="#111827"/>
-<circle cx="24" cy="28" r="10" fill="#60a5fa"/>
-<circle cx="42" cy="38" r="12" fill="#ef4444"/>
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="Layer_1" xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 64 64">
+  <!-- Generator: Adobe Illustrator 29.7.1, SVG Export Plug-In . SVG Version: 2.1.1 Build 8)  -->
+  <defs>
+    <style>
+      .st0 {
+        fill: #60a5fa;
+      }
+
+      .st1 {
+        fill: #111827;
+      }
+
+      .st2 {
+        fill: #ef4444;
+      }
+    </style>
+  </defs>
+  <circle class="st1" cx="32" cy="32" r="28"/>
+  <circle class="st0" cx="23.4" cy="21.4" r="11"/>
+  <circle class="st2" cx="38.4" cy="40.4" r="13.2"/>
 </svg>
