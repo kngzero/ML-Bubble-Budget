@@ -50,7 +50,7 @@ function packCircles(items, width, height, touch=0){
       if(!isFinite(dist)||dist===0){ dx=(Math.random()-0.5)*1e-3; dy=(Math.random()-0.5)*1e-3; dist=Math.hypot(dx,dy); }
       const target=a.r+b.r+touch; const gap=dist-target; const ux=dx/dist, uy=dy/dist;
       if(gap<0){ const s=(-gap)*0.5; a.x-=ux*s; a.y-=uy*s; b.x+=ux*s; b.y+=uy*s; }
-      else if(gap>0.75){ const s=Math.min(gap*0.25,0.6); a.x+=ux*s; a.y+=uy*s; b.x-=ux*s; b.y-=uy*s; }
+      else if(gap>0){ const s=Math.min(gap*0.25,0.6); a.x+=ux*s; a.y+=uy*s; b.x-=ux*s; b.y-=uy*s; }
     }
     for(let i=0;i<N;i++){ const n=nodes[i]; n.x+=(cx-n.x)*0.02; n.y+=(cy-n.y)*0.02;
       if(n.x-n.r<0) n.x=n.r; if(n.x+n.r>width) n.x=width-n.r; if(n.y-n.r<0) n.y=n.r; if(n.y+n.r>height) n.y=height-n.r; }
@@ -246,17 +246,23 @@ export default function SubscriptionBubbleTracker(){
 
 /******************** UI Components ********************/
 function Bubble({ x, y, r, color, className, item, currency, onMarkPaid, onEdit, onDelete }){
-  const [hover, setHover] = useState(false);
-  const style = { position:'absolute', left:x, top:y, width:r*2, height:r*2, transform:'translate(-50%, -50%)', borderRadius:'9999px', background:color, transition:'left 400ms, top 400ms, width 300ms, height 300ms, box-shadow 200ms, transform 150ms', boxShadow: hover ? '0 8px 28px rgba(0,0,0,0.45), inset 0 0 0 4px rgba(255,255,255,0.06)' : '0 4px 18px rgba(0,0,0,0.35), inset 0 0 0 2px rgba(255,255,255,0.06)' };
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+  useEffect(()=>{
+    function handle(e){ if(ref.current && !ref.current.contains(e.target)) setOpen(false); }
+    document.addEventListener('click', handle);
+    return ()=>document.removeEventListener('click', handle);
+  },[]);
+  const style = { position:'absolute', left:x, top:y, width:r*2, height:r*2, transform:'translate(-50%, -50%)', borderRadius:'9999px', background:color, transition:'left 400ms, top 400ms, width 300ms, height 300ms, transform 150ms' };
   const overdue = item.daysLeft < 0;
   return (
-    <div style={style} className={`select-none ${className}`} onMouseEnter={()=>setHover(true)} onMouseLeave={()=>setHover(false)} onClick={onEdit}>
+    <div ref={ref} style={style} className={`select-none ${className}`} onClick={(e)=>{e.stopPropagation(); setOpen(o=>!o);}}>
       <div className="absolute inset-0 rounded-full flex flex-col items-center justify-center text-center px-2">
-        <div className="text-[11px] md:text-xs font-medium leading-tight drop-shadow">{item.name}</div>
-        <div className="text-base md:text-lg font-semibold drop-shadow">{formatCurrency(item.amount, currency)}</div>
+        <div className="text-[11px] md:text-xs font-medium leading-tight">{item.name}</div>
+        <div className="text-base md:text-lg font-semibold">{formatCurrency(item.amount, currency)}</div>
         <div className={`text-[10px] md:text-xs ${overdue? 'text-black/80':'text-black/70'} font-semibold`}>{item.daysLeft < 0 ? `${Math.abs(item.daysLeft)}d overdue` : `${item.daysLeft}d`}</div>
       </div>
-      {hover && (
+      {open && (
         <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 bg-neutral-900/95 text-neutral-100 text-xs rounded-xl p-2 ring-1 ring-white/10 w-max max-w-[240px] shadow-xl" onClick={(e)=>e.stopPropagation()}>
           <div className="font-medium">{item.name}</div>
           <div className="text-neutral-400">Due {item.nextDue} • {item.cycle}{item.cycle==='custom'?` (${item.intervalDays}d)`:''} • {item.autopay? 'Autopay' : 'Manual'}</div>
@@ -267,7 +273,6 @@ function Bubble({ x, y, r, color, className, item, currency, onMarkPaid, onEdit,
           </div>
         </div>
       )}
-      {!item.autopay && (<div className="absolute -top-2 -right-2 bg-black/70 text-white text-[10px] px-2 py-1 rounded-full ring-1 ring-white/20">Manual</div>)}
     </div>
   );
 }

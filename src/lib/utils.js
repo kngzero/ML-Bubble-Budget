@@ -87,7 +87,7 @@ export function packCircles(items, width, height, touch = 0.5) {
           a.y -= uy * s;
           b.x += ux * s;
           b.y += uy * s;
-        } else if (gap > 0.75) {
+        } else if (gap > 0) {
           const s = Math.min(gap * 0.25, 0.8);
           a.x += ux * s;
           a.y += uy * s;
