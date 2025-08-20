@@ -6,16 +6,22 @@ export function daysBetween(a, b) {
 }
 
 export function addInterval(date, cycle, intervalDays = 30) {
-  const d = new Date(date);
+  // Parse as local date to avoid timezone offsets from ISO strings
+  const [y, m, d0] = date.split("-").map(Number);
+  const d = new Date(y, (m || 1) - 1, d0 || 1);
   if (cycle === "weekly") d.setDate(d.getDate() + 7);
   else if (cycle === "monthly") d.setMonth(d.getMonth() + 1);
   else if (cycle === "yearly") {
     const month = d.getMonth();
     d.setFullYear(d.getFullYear() + 1);
     if (d.getMonth() !== month) d.setDate(0);
-  } else if (cycle === "custom")
+  } else if (cycle === "custom") {
     d.setDate(d.getDate() + Number(intervalDays || 30));
-  return d.toISOString().slice(0, 10);
+  }
+  const yr = d.getFullYear();
+  const mo = String(d.getMonth() + 1).padStart(2, "0");
+  const da = String(d.getDate()).padStart(2, "0");
+  return `${yr}-${mo}-${da}`;
 }
 
 export function formatCurrency(n, symbol = "$") {
