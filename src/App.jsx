@@ -100,7 +100,7 @@ export default function SubscriptionBubbleTracker(){
   // Radius mapping
   const ref = useRef(null); const [size, setSize] = useState({w: 800, h: 520});
   useEffect(() => {
-    if (view !== 'bubbles' || !ref.current) return;
+    if (!ref.current) return;
     const ro = new ResizeObserver(es => {
       for (const e of es) {
         const c = e.contentRect;
@@ -109,7 +109,7 @@ export default function SubscriptionBubbleTracker(){
     });
     ro.observe(ref.current);
     return () => ro.disconnect();
-  }, [view, ref.current]);
+  }, [view]);
   function amountToRadius(v){ const {min,max}=amountRange; const rMin=28, rMax=Math.min(140, Math.floor(Math.min(size.w,size.h)*0.28)); if(max===min) return (rMin+rMax)/2; return rMin + (rMax-rMin)*((v-min)/(max-min)); }
   const layoutInput = useMemo(()=> filtered
     .sort((a,b)=> sortBy==='amount' ? b.amount-a.amount : sortBy==='name' ? a.name.localeCompare(b.name) : a.daysLeft-b.daysLeft)
@@ -257,7 +257,18 @@ function Bubble({ x, y, r, color, className, item, currency, onMarkPaid, onEdit,
     document.addEventListener('click', handle);
     return ()=>document.removeEventListener('click', handle);
   },[]);
-  const style = { position:'absolute', left:x, top:y, width:r*2, height:r*2, transform:'translate(-50%, -50%)', borderRadius:'9999px', background:color, transition:'left 400ms, top 400ms, width 300ms, height 300ms, transform 150ms' };
+  const style = {
+    position: 'absolute',
+    left: x,
+    top: y,
+    width: r * 2,
+    height: r * 2,
+    transform: 'translate(-50%, -50%)',
+    borderRadius: '9999px',
+    background: color,
+    transition: 'left 400ms, top 400ms, width 300ms, height 300ms, transform 150ms',
+    zIndex: open ? 10 : 1,
+  };
   const overdue = item.daysLeft < 0;
   return (
     <div ref={ref} style={style} className={`select-none ${className}`} onClick={(e)=>{e.stopPropagation(); setOpen(o=>!o);}}>
