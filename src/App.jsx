@@ -160,13 +160,10 @@ export default function SubscriptionBubbleTracker(){
                 {filtered.map(it => {
                   const p = pos.get(it.id) || {x:60,y:60};
                   const r = (()=>{ const {min,max}=amountRange; const rMin=28, rMax=Math.min(140, Math.floor(Math.min(size.w,size.h)*0.28)); if(max===min) return (rMin+rMax)/2; return rMin + (rMax-rMin)*((it.amount-min)/(max-min)); })();
-                  const ring = it.autopay ? 'ring-2 ring-white/40' : 'ring-2 ring-white/10';
-                  const dash = it.autopay ? '' : 'border-2 border-dashed border-white/20';
                   return (
                     <Bubble key={it.id}
                       x={p.x} y={p.y} r={r}
                       color={it.color}
-                      className={`${ring} ${dash}`}
                       item={it}
                       currency={currency}
                       onMarkPaid={()=>handleMarkPaid(it)}
@@ -249,14 +246,13 @@ export default function SubscriptionBubbleTracker(){
 }
 
 /******************** UI Components ********************/
-function Bubble({ x, y, r, color, className, item, currency, onMarkPaid, onEdit, onDelete }){
+function Bubble({ x, y, r, color, item, currency, onMarkPaid, onEdit, onDelete }){
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
   useEffect(()=>{
     function handle(e){
       if(ref.current && !ref.current.contains(e.target)){
-        // Ignore clicks on other bubbles so multiple menus can stay open
-        if(!e.target.closest('[data-bubble-root]')) setOpen(false);
+        setOpen(false);
       }
     }
     document.addEventListener('click', handle);
@@ -276,7 +272,7 @@ function Bubble({ x, y, r, color, className, item, currency, onMarkPaid, onEdit,
   };
   const overdue = item.daysLeft < 0;
   return (
-    <div ref={ref} data-bubble-root style={style} className={`select-none ${className}`} onClick={(e)=>{e.stopPropagation(); setOpen(o=>!o);}}>
+    <div ref={ref} data-bubble-root style={style} className="select-none" onClick={()=>{ setOpen(o=>!o); }}>
       <div className="absolute inset-0 rounded-full flex flex-col items-center justify-center text-center px-2">
         <div className="text-[11px] md:text-xs font-medium leading-tight">{item.name}</div>
         <div className="text-base md:text-lg font-semibold">{formatCurrency(item.amount, currency)}</div>
