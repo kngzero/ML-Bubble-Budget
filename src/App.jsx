@@ -253,7 +253,12 @@ function Bubble({ x, y, r, color, className, item, currency, onMarkPaid, onEdit,
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
   useEffect(()=>{
-    function handle(e){ if(ref.current && !ref.current.contains(e.target)) setOpen(false); }
+    function handle(e){
+      if(ref.current && !ref.current.contains(e.target)){
+        // Ignore clicks on other bubbles so multiple menus can stay open
+        if(!e.target.closest('[data-bubble-root]')) setOpen(false);
+      }
+    }
     document.addEventListener('click', handle);
     return ()=>document.removeEventListener('click', handle);
   },[]);
@@ -271,7 +276,7 @@ function Bubble({ x, y, r, color, className, item, currency, onMarkPaid, onEdit,
   };
   const overdue = item.daysLeft < 0;
   return (
-    <div ref={ref} style={style} className={`select-none ${className}`} onClick={(e)=>{e.stopPropagation(); setOpen(o=>!o);}}>
+    <div ref={ref} data-bubble-root style={style} className={`select-none ${className}`} onClick={(e)=>{e.stopPropagation(); setOpen(o=>!o);}}>
       <div className="absolute inset-0 rounded-full flex flex-col items-center justify-center text-center px-2">
         <div className="text-[11px] md:text-xs font-medium leading-tight">{item.name}</div>
         <div className="text-base md:text-lg font-semibold">{formatCurrency(item.amount, currency)}</div>
