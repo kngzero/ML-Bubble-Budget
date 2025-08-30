@@ -147,3 +147,13 @@ export function parseHue(hsl) {
   const m = /hsl\(([^\s]+)\s/.exec(hsl);
   return m ? parseFloat(m[1]) : NaN;
 }
+
+// Toggle selection ids with optional multi-select (shift-click)
+export function updateSelection(selected, id, multi = false) {
+  if (multi) {
+    return selected.includes(id)
+      ? selected.filter((x) => x !== id)
+      : [...selected, id];
+  }
+  return selected.includes(id) ? [] : [id];
+}
