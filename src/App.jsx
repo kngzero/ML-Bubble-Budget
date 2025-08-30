@@ -4,7 +4,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import ShaderBubbleView from "./lib/ShaderBubbleView.jsx";
-import { packCircles } from "./lib/utils.js";
+import { packCircles, updateSelection } from "./lib/utils.js";
 
 /******************** Utilities ********************/
 function daysBetween(a, b) {
@@ -75,6 +75,7 @@ export default function SubscriptionBubbleTracker(){
   });
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState(null);
+  const [selectedIds, setSelectedIds] = useState([]);
   useEffect(()=>{ localStorage.setItem(STORAGE_KEY, JSON.stringify(dehydrate(items))); },[items]);
 
   const now = new Date();
@@ -160,18 +161,28 @@ export default function SubscriptionBubbleTracker(){
                 {filtered.map(it => {
                   const p = pos.get(it.id) || {x:60,y:60};
                   const r = (()=>{ const {min,max}=amountRange; const rMin=28, rMax=Math.min(140, Math.floor(Math.min(size.w,size.h)*0.28)); if(max===min) return (rMin+rMax)/2; return rMin + (rMax-rMin)*((it.amount-min)/(max-min)); })();
+                  const selected = selectedIds.includes(it.id);
                   return (
-                    <Bubble key={it.id}
+                    <Bubble
+                      key={it.id}
                       x={p.x} y={p.y} r={r}
                       color={it.color}
                       item={it}
                       currency={currency}
-                      onMarkPaid={()=>handleMarkPaid(it)}
-                      onEdit={()=>handleEdit(it)}
-                      onDelete={()=>handleDelete(it)}
+                      selected={selected}
+                      onSelect={(e)=>setSelectedIds(prev=>updateSelection(prev, it.id, e.shiftKey))}
+                      onDeselect={(e)=>setSelectedIds(prev=>updateSelection(prev, it.id, e.shiftKey))}
                     />
                   );
                 })}
+                {selectedIds.length > 0 && (
+                  <BubbleToolbar
+                    count={selectedIds.length}
+                    onMarkPaid={()=>{ selectedIds.forEach(id=>{ const it=items.find(x=>x.id===id); if(it) handleMarkPaid(it); }); setSelectedIds([]); }}
+                    onEdit={()=>{ const it=items.find(x=>x.id===selectedIds[0]); if(it) handleEdit(it); }}
+                    onDelete={()=>{ if(confirm('Delete selected subscriptions?')){ selectedIds.forEach(id=>handleDelete({id})); setSelectedIds([]); } }}
+                  />
+                )}
               </div>
             ) : view==='shader' ? (
               <div ref={ref} className="relative h-[56vh] min-h-[420px] rounded-3xl bg-neutral-900/70 ring-1 ring-white/10 overflow-hidden">
@@ -246,18 +257,7 @@ export default function SubscriptionBubbleTracker(){
 }
 
 /******************** UI Components ********************/
-function Bubble({ x, y, r, color, item, currency, onMarkPaid, onEdit, onDelete }){
-  const [open, setOpen] = useState(false);
-  const ref = useRef(null);
-  useEffect(()=>{
-    function handle(e){
-      if(ref.current && !ref.current.contains(e.target)){
-        setOpen(false);
-      }
-    }
-    document.addEventListener('click', handle);
-    return ()=>document.removeEventListener('click', handle);
-  },[]);
+function Bubble({ x, y, r, color, item, currency, selected, onSelect, onDeselect }) {
   const style = {
     position: 'absolute',
     left: x,
@@ -268,27 +268,38 @@ function Bubble({ x, y, r, color, item, currency, onMarkPaid, onEdit, onDelete }
     borderRadius: '9999px',
     background: color,
     transition: 'left 400ms, top 400ms, width 300ms, height 300ms, transform 150ms',
-    zIndex: open ? 10 : 1,
+    boxShadow: selected ? '0 0 0 4px rgba(255,255,255,0.8)' : undefined,
+    opacity: selected ? 0.8 : 1,
+    zIndex: selected ? 5 : 1,
   };
   const overdue = item.daysLeft < 0;
   return (
-    <div ref={ref} data-bubble-root style={style} className="select-none" onClick={()=>{ setOpen(o=>!o); }}>
-      <div className="absolute inset-0 rounded-full flex flex-col items-center justify-center text-center px-2">
+    <div
+      data-bubble-root
+      style={style}
+      className="select-none cursor-pointer"
+      onClick={(e) => {
+        selected ? onDeselect(e) : onSelect(e);
+      }}
+    >
+      <div className="absolute inset-0 rounded-full flex flex-col items-center justify-center text-center px-2 pointer-events-none">
         <div className="text-[11px] md:text-xs font-medium leading-tight">{item.name}</div>
         <div className="text-base md:text-lg font-semibold">{formatCurrency(item.amount, currency)}</div>
-        <div className={`text-[10px] md:text-xs ${overdue? 'text-black/80':'text-black/70'} font-semibold`}>{item.daysLeft < 0 ? `${Math.abs(item.daysLeft)}d overdue` : `${item.daysLeft}d`}</div>
-      </div>
-      {open && (
-        <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 bg-neutral-900/95 text-neutral-100 text-xs rounded-xl p-2 ring-1 ring-white/10 w-max max-w-[240px] shadow-xl" onClick={(e)=>e.stopPropagation()}>
-          <div className="font-medium">{item.name}</div>
-          <div className="text-neutral-400">Due {item.nextDue} • {item.cycle}{item.cycle==='custom'?` (${item.intervalDays}d)`:''} • {item.autopay? 'Autopay' : 'Manual'}</div>
-          <div className="mt-2 flex gap-2">
-            <button onClick={onMarkPaid} className="px-2 py-1 rounded-lg bg-white text-neutral-900 text-xs font-semibold">Mark paid</button>
-            <button onClick={onEdit} className="px-2 py-1 rounded-lg bg-neutral-800 text-xs">Edit</button>
-            <button onClick={(e)=>{e.stopPropagation(); if(confirm('Delete subscription?')) onDelete();}} className="px-2 py-1 rounded-lg bg-red-600/90 text-xs">Delete</button>
-          </div>
+        <div className={`text-[10px] md:text-xs ${overdue ? 'text-black/80' : 'text-black/70'} font-semibold`}>
+          {item.daysLeft < 0 ? `${Math.abs(item.daysLeft)}d overdue` : `${item.daysLeft}d`}
         </div>
-      )}
+      </div>
+    </div>
+  );
+}
+
+function BubbleToolbar({ count, onMarkPaid, onEdit, onDelete }) {
+  return (
+    <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-20 bg-neutral-900/95 ring-1 ring-white/10 rounded-2xl shadow-xl px-4 py-2 flex items-center gap-2">
+      <span className="text-sm text-neutral-400 mr-2">{count} selected</span>
+      <button onClick={onMarkPaid} className="px-3 py-1 rounded-lg bg-white text-neutral-900 text-sm font-semibold">Mark paid</button>
+      <button onClick={onEdit} className="px-3 py-1 rounded-lg bg-neutral-800 text-sm">Edit</button>
+      <button onClick={onDelete} className="px-3 py-1 rounded-lg bg-red-600/90 text-sm">Delete</button>
     </div>
   );
 }

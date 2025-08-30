@@ -6,6 +6,7 @@ import {
   dueColor,
   parseHue,
   packCircles,
+  updateSelection,
 } from "../src/lib/utils.js";
 
 describe("utils", () => {
@@ -58,5 +59,17 @@ describe("utils", () => {
         expect(dist + 0.25).toBeGreaterThanOrEqual(A.r + B.r); // epsilon
       }
     }
+  });
+
+  it("updateSelection toggles ids with optional multi-select", () => {
+    let sel = [];
+    sel = updateSelection(sel, "a", false);
+    expect(sel).toEqual(["a"]);
+    sel = updateSelection(sel, "b", true);
+    expect(sel.sort()).toEqual(["a", "b"]);
+    sel = updateSelection(sel, "a", true);
+    expect(sel).toEqual(["b"]);
+    sel = updateSelection(sel, "b", false);
+    expect(sel).toEqual([]);
   });
 });
