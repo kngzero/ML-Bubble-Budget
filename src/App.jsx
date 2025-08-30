@@ -116,7 +116,13 @@ export default function SubscriptionBubbleTracker(){
     .map(x=>({id:x.id, r:amountToRadius(x.amount)})), [filtered, size, sortBy]);
   const pos = useMemo(()=> packCircles(layoutInput, size.w, size.h, 0.5), [layoutInput, size]);
 
-  const monthlyTotal = useMemo(()=> filtered.reduce((acc, x)=> acc + monthlyEquivalent(x.amount, x.cycle, x.intervalDays), 0), [filtered]);
+  const monthlyTotal = useMemo(() =>
+    filtered.reduce(
+      (acc, x) => acc + monthlyEquivalent(x.amount, x.cycle, x.intervalDays),
+      0,
+    ),
+  [filtered]);
+  const yearlyTotal = useMemo(() => monthlyTotal * 12, [monthlyTotal]);
 
   function handleMarkPaid(it){ setItems(prev => prev.map(p => p.id===it.id ? { ...p, nextDue: addInterval(p.nextDue, p.cycle, p.intervalDays) } : p)); }
   function handleDelete(it){ setItems(prev => prev.filter(p => p.id !== it.id)); }
@@ -216,7 +222,9 @@ export default function SubscriptionBubbleTracker(){
             <div className="rounded-3xl bg-neutral-900/70 ring-1 ring-white/10 p-4">
               <h3 className="text-sm text-neutral-400">Monthly equivalent</h3>
               <div className="mt-1 text-2xl font-semibold">{formatCurrency(monthlyTotal, currency)}</div>
-              <p className="text-xs text-neutral-400 mt-1">Yearly/weekly/custom amounts are converted to monthly estimates to help budget planning.</p>
+              <h3 className="mt-4 text-sm text-neutral-400">Yearly total</h3>
+              <div className="mt-1 text-2xl font-semibold">{formatCurrency(yearlyTotal, currency)}</div>
+              <p className="text-xs text-neutral-400 mt-1">Yearly/weekly/custom amounts are converted to monthly estimates to help budget planning. Yearly total is derived from this estimate.</p>
             </div>
           </aside>
         </div>
