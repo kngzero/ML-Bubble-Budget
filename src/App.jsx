@@ -4,6 +4,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import ShaderBubbleView from "./lib/ShaderBubbleView.jsx";
+import { packCircles } from "./lib/utils.js";
 
 /******************** Utilities ********************/
 function daysBetween(a, b) {
@@ -36,27 +37,6 @@ function dueColor(daysLeft, lookahead=30){
   const hue = 220 - ease * 220; // 220 → 0
   const sat = 90; const light = 58;
   return `hsl(${hue} ${sat}% ${light}%)`;
-}
-// Circle packing so bubbles touch but never overlap
-function packCircles(items, width, height, touch=0){
-  const nodes = items.map((it, i) => {
-    const angle = i * 0.6; const rad = 4 + i * 2;
-    return { id: it.id, r: it.r, x: width/2 + Math.cos(angle)*rad, y: height/2 + Math.sin(angle)*rad };
-  });
-  const cx=width/2, cy=height/2, N=nodes.length, ITER=Math.min(800, 200+N*35);
-  for(let k=0;k<ITER;k++){
-    for(let i=0;i<N;i++) for(let j=i+1;j<N;j++){
-      const a=nodes[i], b=nodes[j];
-      let dx=b.x-a.x, dy=b.y-a.y; let dist=Math.hypot(dx,dy);
-      if(!isFinite(dist)||dist===0){ dx=(Math.random()-0.5)*1e-3; dy=(Math.random()-0.5)*1e-3; dist=Math.hypot(dx,dy); }
-      const target=a.r+b.r+touch; const gap=dist-target; const ux=dx/dist, uy=dy/dist;
-      if(gap<0){ const s=(-gap)*0.5; a.x-=ux*s; a.y-=uy*s; b.x+=ux*s; b.y+=uy*s; }
-      else if(gap>0){ const s=Math.min(gap*0.25,0.6); a.x+=ux*s; a.y+=uy*s; b.x-=ux*s; b.y-=uy*s; }
-    }
-    for(let i=0;i<N;i++){ const n=nodes[i]; n.x+=(cx-n.x)*0.02; n.y+=(cy-n.y)*0.02;
-      if(n.x-n.r<0) n.x=n.r; if(n.x+n.r>width) n.x=width-n.r; if(n.y-n.r<0) n.y=n.r; if(n.y+n.r>height) n.y=height-n.r; }
-  }
-  const pos=new Map(); nodes.forEach(n=>pos.set(n.id,{x:n.x,y:n.y})); return pos;
 }
 function futureDate(days){ const d=new Date(); d.setDate(d.getDate()+days); return d.toISOString().slice(0,10); }
 const STORAGE_KEY = "subscription-tracker-v2";
@@ -134,7 +114,7 @@ export default function SubscriptionBubbleTracker(){
   const layoutInput = useMemo(()=> filtered
     .sort((a,b)=> sortBy==='amount' ? b.amount-a.amount : sortBy==='name' ? a.name.localeCompare(b.name) : a.daysLeft-b.daysLeft)
     .map(x=>({id:x.id, r:amountToRadius(x.amount)})), [filtered, size, sortBy]);
-  const pos = useMemo(()=> packCircles(layoutInput, size.w, size.h, 0), [layoutInput, size]);
+  const pos = useMemo(()=> packCircles(layoutInput, size.w, size.h, 0.5), [layoutInput, size]);
 
   const monthlyTotal = useMemo(()=> filtered.reduce((acc, x)=> acc + monthlyEquivalent(x.amount, x.cycle, x.intervalDays), 0), [filtered]);
 
