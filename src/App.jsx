@@ -120,10 +120,48 @@ export default function SubscriptionBubbleTracker(){
     ro.observe(ref.current);
     return () => ro.disconnect();
   }, [view]);
-  function amountToRadius(v){ const {min,max}=amountRange; const rMin=28, rMax=Math.min(140, Math.floor(Math.min(size.w,size.h)*0.28)); if(max===min) return (rMin+rMax)/2; return rMin + (rMax-rMin)*((v-min)/(max-min)); }
-  const layoutInput = useMemo(()=> sorted
-    .map(x=>({id:x.id, r:amountToRadius(x.amount)})), [sorted, size]);
-  const pos = useMemo(()=> packCircles(layoutInput, size.w, size.h, 0.5), [layoutInput, size]);
+  const { amountToRadius, pos } = useMemo(() => {
+    const { min, max } = amountRange;
+    const rMin = 28;
+    const rMax = Math.min(140, Math.floor(Math.min(size.w, size.h) * 0.28));
+    const base = (v) =>
+      max === min
+        ? (rMin + rMax) / 2
+        : rMin + (rMax - rMin) * ((v - min) / (max - min));
+    const layout = sorted.map((x) => ({ id: x.id, r: base(x.amount) }));
+    if (layout.length === 0) return { amountToRadius: base, pos: new Map() };
+    let packed = packCircles(layout, size.w, size.h, 0.5);
+    let minX = Infinity,
+      maxX = -Infinity,
+      minY = Infinity,
+      maxY = -Infinity;
+    for (const { id, r } of layout) {
+      const p = packed.get(id);
+      if (!p) continue;
+      minX = Math.min(minX, p.x - r);
+      maxX = Math.max(maxX, p.x + r);
+      minY = Math.min(minY, p.y - r);
+      maxY = Math.max(maxY, p.y + r);
+    }
+    const usedW = maxX - minX;
+    const usedH = maxY - minY;
+    const scale = Math.min(size.w / usedW, size.h / usedH);
+    if (scale > 1) {
+      const cx = (minX + maxX) / 2;
+      const cy = (minY + maxY) / 2;
+      const scaled = new Map();
+      for (const { id, r } of layout) {
+        const p = packed.get(id);
+        scaled.set(id, {
+          x: size.w / 2 + (p.x - cx) * scale,
+          y: size.h / 2 + (p.y - cy) * scale,
+        });
+      }
+      packed = scaled;
+    }
+    const amountToRadius = (v) => base(v) * (scale > 1 ? scale : 1);
+    return { amountToRadius, pos: packed };
+  }, [sorted, amountRange, size]);
 
   const monthlyTotal = useMemo(() =>
     filtered.reduce(
@@ -196,8 +234,8 @@ export default function SubscriptionBubbleTracker(){
             {view==='bubbles' ? (
               <div ref={ref} className="relative h-[56vh] min-h-[420px] rounded-3xl bg-neutral-100 dark:bg-neutral-900/70 ring-1 ring-black/10 dark:ring-white/10 overflow-hidden">
                 {sorted.map(it => {
-                  const p = pos.get(it.id) || {x:60,y:60};
-                  const r = (()=>{ const {min,max}=amountRange; const rMin=28, rMax=Math.min(140, Math.floor(Math.min(size.w,size.h)*0.28)); if(max===min) return (rMin+rMax)/2; return rMin + (rMax-rMin)*((it.amount-min)/(max-min)); })();
+                  const p = pos.get(it.id) || { x: 60, y: 60 };
+                  const r = amountToRadius(it.amount);
                   const selected = selectedIds.includes(it.id);
                   return (
                     <Bubble
