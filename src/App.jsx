@@ -266,20 +266,22 @@ export default function SubscriptionBubbleTracker(){
             <h1 className="text-2xl md:text-3xl font-semibold tracking-tight">Subscription Tracker</h1>
             <p className="text-neutral-600 dark:text-neutral-400 text-sm md:text-base">Primary view: bubbles. Secondary view: table for quick edits.</p>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-3">
             <div className="inline-flex p-1 rounded-2xl bg-neutral-200 dark:bg-neutral-800 ring-1 ring-black/10 dark:ring-white/10">
               <button onClick={()=>setView('bubbles')} className={`px-3 py-1.5 rounded-xl text-sm font-medium ${view==='bubbles'?'bg-white text-neutral-900':'text-neutral-700 hover:text-neutral-900 dark:text-neutral-300 dark:hover:text-white'}`}>Bubbles</button>
               <button onClick={()=>setView('table')} className={`px-3 py-1.5 rounded-xl text-sm font-medium ${view==='table'?'bg-white text-neutral-900':'text-neutral-700 hover:text-neutral-900 dark:text-neutral-300 dark:hover:text-white'}`}>Table</button>
               <button onClick={()=>setView('shader')} className={`px-3 py-1.5 rounded-xl text-sm font-medium ${view==='shader'?'bg-white text-neutral-900':'text-neutral-700 hover:text-neutral-900 dark:text-neutral-300 dark:hover:text-white'}`}>Shader</button>
             </div>
-            <select value={theme} onChange={e=>setTheme(e.target.value)} className="px-3 py-2 rounded-2xl bg-neutral-200 dark:bg-neutral-800 ring-1 ring-black/10 dark:ring-white/10 text-sm">
-              <option value="system">System</option>
-              <option value="light">Light</option>
-              <option value="dark">Dark</option>
-            </select>
-            <button onClick={()=>{setEditing(null); setShowForm(true);}} className="px-3 py-2 rounded-2xl bg-white text-neutral-900 text-sm font-medium shadow hover:shadow-md transition">Add Subscription</button>
-            <label className="px-3 py-2 rounded-2xl bg-neutral-200 dark:bg-neutral-800 text-sm cursor-pointer hover:bg-neutral-300 dark:hover:bg-neutral-700 transition">Import JSON<input type="file" onChange={handleImport} accept="application/json" className="hidden"/></label>
-            <button onClick={handleExport} className="px-3 py-2 rounded-2xl bg-neutral-200 dark:bg-neutral-800 text-sm hover:bg-neutral-300 dark:hover:bg-neutral-700 transition">Export JSON</button>
+            <div className="inline-flex p-1 rounded-2xl bg-neutral-200 dark:bg-neutral-800 ring-1 ring-black/10 dark:ring-white/10">
+              <button onClick={()=>setTheme('system')} className={`px-3 py-1.5 rounded-xl text-sm font-medium ${theme==='system'?'bg-white text-neutral-900':'text-neutral-700 hover:text-neutral-900 dark:text-neutral-300 dark:hover:text-white'}`}>System</button>
+              <button onClick={()=>setTheme('light')} className={`px-3 py-1.5 rounded-xl text-sm font-medium ${theme==='light'?'bg-white text-neutral-900':'text-neutral-700 hover:text-neutral-900 dark:text-neutral-300 dark:hover:text-white'}`}>Light</button>
+              <button onClick={()=>setTheme('dark')} className={`px-3 py-1.5 rounded-xl text-sm font-medium ${theme==='dark'?'bg-white text-neutral-900':'text-neutral-700 hover:text-neutral-900 dark:text-neutral-300 dark:hover:text-white'}`}>Dark</button>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <button onClick={()=>{setEditing(null); setShowForm(true);}} className="px-3 py-1.5 rounded-xl bg-white text-neutral-900 text-sm font-medium shadow hover:shadow-md transition">Add</button>
+              <label className="px-3 py-1.5 rounded-xl bg-neutral-200 dark:bg-neutral-800 text-sm cursor-pointer hover:bg-neutral-300 dark:hover:bg-neutral-700 transition">Import<input type="file" onChange={handleImport} accept="application/json" className="hidden"/></label>
+              <button onClick={handleExport} className="px-3 py-1.5 rounded-xl bg-neutral-200 dark:bg-neutral-800 text-sm hover:bg-neutral-300 dark:hover:bg-neutral-700 transition">Export</button>
+            </div>
           </div>
         </header>
 
