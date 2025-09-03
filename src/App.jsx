@@ -77,6 +77,7 @@ export default function SubscriptionBubbleTracker(){
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState(null);
   const [selectedIds, setSelectedIds] = useState([]);
+  const [zoomCategory, setZoomCategory] = useState(null);
   useEffect(()=>{ localStorage.setItem(STORAGE_KEY, JSON.stringify(dehydrate(items))); },[items]);
 
   const now = new Date();
@@ -93,11 +94,21 @@ export default function SubscriptionBubbleTracker(){
     return true;
   }),[enriched, query, filter]);
 
+  useEffect(()=>{ if(sortBy!=='category') setZoomCategory(null); },[sortBy]);
+  useEffect(()=>{ if(sortBy==='category' && !zoomCategory) setSelectedIds([]); },[sortBy, zoomCategory]);
+
   const amountRange = useMemo(()=>{
     const vals = filtered.map(f=>f.amount);
+    if(sortBy==='category' && !zoomCategory){
+      const totals = new Map();
+      for(const f of filtered){
+        if(f.category) totals.set(f.category, (totals.get(f.category)||0)+f.amount);
+      }
+      vals.push(...totals.values());
+    }
     const min = Math.min(...vals, 1); const max = Math.max(...vals, 100);
     return {min, max};
-  },[filtered]);
+  },[filtered, sortBy, zoomCategory]);
 
   const sorted = useMemo(()=> {
     return [...filtered].sort((a,b)=>
@@ -162,6 +173,49 @@ export default function SubscriptionBubbleTracker(){
     const amountToRadius = (v) => base(v) * (scale > 1 ? scale : 1);
     return { amountToRadius, pos: packed };
   }, [sorted, amountRange, size]);
+
+  const bubbleLayout = useMemo(()=>{
+    if(sortBy!=='category' || zoomCategory){
+      const src = sortBy==='category' && zoomCategory ? sorted.filter(it=>it.category===zoomCategory) : sorted;
+      const layout = src.map(it=>({id:it.id, r:amountToRadius(it.amount)}));
+      const packed = packCircles(layout, size.w, size.h, 0.5);
+      const items = src.map(it=>{
+        const p = packed.get(it.id) || {x:0,y:0};
+        return { item: it, x: p.x, y: p.y, r: amountToRadius(it.amount) };
+      });
+      return { groups: [], items };
+    }
+    // grouped view
+    const groupsMap = new Map();
+    const singles = [];
+    for(const it of filtered){
+      if(!it.category){ singles.push(it); continue; }
+      const arr = groupsMap.get(it.category)||[];
+      arr.push(it);
+      groupsMap.set(it.category, arr);
+    }
+    const groupReprs = Array.from(groupsMap.entries()).map(([cat, arr])=>({
+      id:`group-${cat}`,
+      name:cat,
+      amount:arr.reduce((a,b)=>a+b.amount,0),
+      color:arr[0].color,
+      items:arr,
+    }));
+    const topLayoutItems=[
+      ...groupReprs.map(g=>({id:g.id,r:amountToRadius(g.amount)})),
+      ...singles.map(it=>({id:it.id,r:amountToRadius(it.amount)}))
+    ];
+    const packedTop=packCircles(topLayoutItems, size.w, size.h,0.5);
+    const groups=groupReprs.map(g=>{
+      const p=packedTop.get(g.id)||{x:0,y:0};
+      return { ...g, x:p.x, y:p.y, r:amountToRadius(g.amount) };
+    });
+    const items=singles.map(it=>{
+      const p=packedTop.get(it.id)||{x:0,y:0};
+      return { item:it, x:p.x, y:p.y, r:amountToRadius(it.amount) };
+    });
+    return { groups, items };
+  }, [sortBy, zoomCategory, sorted, filtered, amountToRadius, size]);
 
   const monthlyTotal = useMemo(() =>
     filtered.reduce(
@@ -233,20 +287,25 @@ export default function SubscriptionBubbleTracker(){
           <div className="xl:col-span-3">
             {view==='bubbles' ? (
               <div ref={ref} className="relative h-[56vh] min-h-[420px] rounded-3xl bg-neutral-100 dark:bg-neutral-900/70 ring-1 ring-black/10 dark:ring-white/10 overflow-hidden">
-                {sorted.map(it => {
-                  const p = pos.get(it.id) || { x: 60, y: 60 };
-                  const r = amountToRadius(it.amount);
-                  const selected = selectedIds.includes(it.id);
+                {sortBy==='category' && zoomCategory && (
+                  <button onClick={()=>setZoomCategory(null)} className="absolute z-10 top-2 left-2 px-3 py-1 rounded-lg bg-white text-sm">Back</button>
+                )}
+                {bubbleLayout.groups.map(g=> (
+                  <CategoryGroup key={g.id} group={g} currency={currency} onZoom={()=>setZoomCategory(g.name)} />
+                ))}
+                {bubbleLayout.items.map(({item,x,y,r})=>{
+                  const selected = selectedIds.includes(item.id);
                   return (
                     <Bubble
-                      key={it.id}
-                      x={p.x} y={p.y} r={r}
-                      color={it.color}
-                      item={it}
+                      key={item.id}
+                      x={x} y={y} r={r}
+                      color={item.color}
+                      item={item}
                       currency={currency}
                       selected={selected}
-                      onSelect={(e)=>setSelectedIds(prev=>updateSelection(prev, it.id, e.shiftKey))}
-                      onDeselect={(e)=>setSelectedIds(prev=>updateSelection(prev, it.id, e.shiftKey))}
+                      onSelect={(e)=>setSelectedIds(prev=>updateSelection(prev, item.id, e.shiftKey))}
+                      onDeselect={(e)=>setSelectedIds(prev=>updateSelection(prev, item.id, e.shiftKey))}
+                      interactive={sortBy!=='category' || zoomCategory!==null || !item.category}
                     />
                   );
                 })}
@@ -333,7 +392,7 @@ export default function SubscriptionBubbleTracker(){
 }
 
 /******************** UI Components ********************/
-function Bubble({ x, y, r, color, item, currency, selected, onSelect, onDeselect }) {
+function Bubble({ x, y, r, color, item, currency, selected, onSelect, onDeselect, interactive=true }) {
   const style = {
     position: 'absolute',
     left: x,
@@ -347,6 +406,7 @@ function Bubble({ x, y, r, color, item, currency, selected, onSelect, onDeselect
     boxShadow: selected ? '0 0 0 4px rgba(255,255,255,0.8)' : undefined,
     opacity: selected ? 0.8 : 1,
     zIndex: selected ? 5 : 1,
+    pointerEvents: interactive ? 'auto' : 'none',
   };
   const overdue = item.daysLeft < 0;
   return (
@@ -355,6 +415,7 @@ function Bubble({ x, y, r, color, item, currency, selected, onSelect, onDeselect
       style={style}
       className="select-none cursor-pointer"
       onClick={(e) => {
+        if(!interactive) return;
         selected ? onDeselect(e) : onSelect(e);
       }}
     >
@@ -364,6 +425,30 @@ function Bubble({ x, y, r, color, item, currency, selected, onSelect, onDeselect
         <div className={`text-[10px] md:text-xs ${overdue ? 'text-black/80' : 'text-black/70'} font-semibold`}>
           {item.daysLeft < 0 ? `${Math.abs(item.daysLeft)}d overdue` : `${item.daysLeft}d`}
         </div>
+      </div>
+    </div>
+  );
+}
+
+function CategoryGroup({ group, currency, onZoom }) {
+  const style = {
+    position:'absolute',
+    left:group.x,
+    top:group.y,
+    width:group.r*2,
+    height:group.r*2,
+    transform:'translate(-50%, -50%)',
+    borderRadius:'9999px',
+    border:'2px solid rgba(0,0,0,0.15)',
+    overflow:'hidden',
+    cursor:'pointer',
+    background: group.color,
+    opacity:0.3,
+  };
+  return (
+    <div style={style} onClick={onZoom}>
+      <div className="absolute inset-0 flex items-center justify-center text-xs font-semibold pointer-events-none">
+        {group.name}
       </div>
     </div>
   );
