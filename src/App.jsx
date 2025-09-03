@@ -41,23 +41,23 @@ function dueColor(daysLeft, lookahead=30){
 function futureDate(days){ const d=new Date(); d.setDate(d.getDate()+days); return d.toISOString().slice(0,10); }
 const STORAGE_KEY = "subscription-tracker-v2";
 function normalizeItem(x){
-  return { id: x.id || crypto.randomUUID(), name: x.name||'', amount: Number(x.amount||0), cycle: x.cycle||'monthly', intervalDays: x.intervalDays||30, nextDue: x.nextDue || new Date().toISOString().slice(0,10), autopay: !!x.autopay };
+  return { id: x.id || crypto.randomUUID(), name: x.name||'', category: x.category||'', amount: Number(x.amount||0), cycle: x.cycle||'monthly', intervalDays: x.intervalDays||30, nextDue: x.nextDue || new Date().toISOString().slice(0,10), autopay: !!x.autopay };
 }
 function hydrate(arr){ return arr.map(normalizeItem); }
-function dehydrate(arr){ return arr.map(({id,name,amount,cycle,intervalDays,nextDue,autopay})=>({id,name,amount,cycle,intervalDays,nextDue,autopay})); }
+function dehydrate(arr){ return arr.map(({id,name,category,amount,cycle,intervalDays,nextDue,autopay})=>({id,name,category,amount,cycle,intervalDays,nextDue,autopay})); }
 
 /******************** Sample ********************/
 const SAMPLE = [
-  { name: "Netflix", amount: 15.99, cycle: "monthly", nextDue: futureDate(5), autopay: true },
-  { name: "Adobe CC", amount: 54.99, cycle: "monthly", nextDue: futureDate(2), autopay: true },
-  { name: "Spotify", amount: 9.99, cycle: "monthly", nextDue: futureDate(13), autopay: false },
-  { name: "iCloud 2TB", amount: 9.99, cycle: "monthly", nextDue: futureDate(22), autopay: true },
-  { name: "Notion", amount: 8, cycle: "monthly", nextDue: futureDate(1), autopay: false },
-  { name: "Figma", amount: 12, cycle: "monthly", nextDue: futureDate(27), autopay: true },
-  { name: "AWS (avg)", amount: 42, cycle: "monthly", nextDue: futureDate(9), autopay: true },
-  { name: "Domain Pack", amount: 96, cycle: "yearly", nextDue: futureDate(60), autopay: false },
-  { name: "GYM", amount: 39, cycle: "monthly", nextDue: futureDate(4), autopay: true },
-  { name: "VPN", amount: 4.5, cycle: "monthly", nextDue: futureDate(17), autopay: true },
+  { name: "Netflix", category: "Entertainment", amount: 15.99, cycle: "monthly", nextDue: futureDate(5), autopay: true },
+  { name: "Adobe CC", category: "Productivity", amount: 54.99, cycle: "monthly", nextDue: futureDate(2), autopay: true },
+  { name: "Spotify", category: "Entertainment", amount: 9.99, cycle: "monthly", nextDue: futureDate(13), autopay: false },
+  { name: "iCloud 2TB", category: "Storage", amount: 9.99, cycle: "monthly", nextDue: futureDate(22), autopay: true },
+  { name: "Notion", category: "Productivity", amount: 8, cycle: "monthly", nextDue: futureDate(1), autopay: false },
+  { name: "Figma", category: "Productivity", amount: 12, cycle: "monthly", nextDue: futureDate(27), autopay: true },
+  { name: "AWS (avg)", category: "Infrastructure", amount: 42, cycle: "monthly", nextDue: futureDate(9), autopay: true },
+  { name: "Domain Pack", category: "Infrastructure", amount: 96, cycle: "yearly", nextDue: futureDate(60), autopay: false },
+  { name: "GYM", category: "Health", amount: 39, cycle: "monthly", nextDue: futureDate(4), autopay: true },
+  { name: "VPN", category: "Security", amount: 4.5, cycle: "monthly", nextDue: futureDate(17), autopay: true },
 ];
 
 /******************** App ********************/
@@ -66,7 +66,7 @@ export default function SubscriptionBubbleTracker(){
   const [lookahead, setLookahead] = useState(30);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState("all"); // all | overdue | autopay | manual
-  const [sortBy, setSortBy] = useState("due"); // due | amount | name
+  const [sortBy, setSortBy] = useState("due"); // due | amount | name | category
   const [view, setView] = useState("bubbles"); // bubbles | table | shader
   const [items, setItems] = useState(() => {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -85,7 +85,7 @@ export default function SubscriptionBubbleTracker(){
   }),[items, lookahead]);
 
   const filtered = useMemo(()=> enriched.filter(it => {
-    if (query && !(`${it.name}`.toLowerCase().includes(query.toLowerCase()))) return false;
+    if (query && !(""+it.name).toLowerCase().includes(query.toLowerCase()) && !(""+it.category).toLowerCase().includes(query.toLowerCase())) return false;
     if (filter === 'overdue' && it.daysLeft >= 0) return false;
     if (filter === 'autopay' && !it.autopay) return false;
     if (filter === 'manual' && it.autopay) return false;
@@ -97,6 +97,14 @@ export default function SubscriptionBubbleTracker(){
     const min = Math.min(...vals, 1); const max = Math.max(...vals, 100);
     return {min, max};
   },[filtered]);
+
+  const sorted = useMemo(()=> {
+    return [...filtered].sort((a,b)=>
+      sortBy==='amount' ? b.amount - a.amount :
+      sortBy==='name' ? a.name.localeCompare(b.name) :
+      sortBy==='category' ? (a.category||'').localeCompare(b.category||'') :
+      a.daysLeft - b.daysLeft);
+  },[filtered, sortBy]);
 
   // Radius mapping
   const ref = useRef(null); const [size, setSize] = useState({w: 800, h: 520});
@@ -112,9 +120,8 @@ export default function SubscriptionBubbleTracker(){
     return () => ro.disconnect();
   }, [view]);
   function amountToRadius(v){ const {min,max}=amountRange; const rMin=28, rMax=Math.min(140, Math.floor(Math.min(size.w,size.h)*0.28)); if(max===min) return (rMin+rMax)/2; return rMin + (rMax-rMin)*((v-min)/(max-min)); }
-  const layoutInput = useMemo(()=> filtered
-    .sort((a,b)=> sortBy==='amount' ? b.amount-a.amount : sortBy==='name' ? a.name.localeCompare(b.name) : a.daysLeft-b.daysLeft)
-    .map(x=>({id:x.id, r:amountToRadius(x.amount)})), [filtered, size, sortBy]);
+  const layoutInput = useMemo(()=> sorted
+    .map(x=>({id:x.id, r:amountToRadius(x.amount)})), [sorted, size]);
   const pos = useMemo(()=> packCircles(layoutInput, size.w, size.h, 0.5), [layoutInput, size]);
 
   const monthlyTotal = useMemo(() =>
@@ -131,7 +138,7 @@ export default function SubscriptionBubbleTracker(){
   function handleSave(form){ if(form.id){ setItems(prev=>prev.map(p=>p.id===form.id? normalizeItem(form):p)); } else { setItems(prev=>[...prev, normalizeItem({...form, id: crypto.randomUUID()})]); } setShowForm(false); setEditing(null); }
   function handleExport(){ const blob=new Blob([JSON.stringify(dehydrate(items),null,2)],{type:'application/json'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='subscriptions.json'; a.click(); URL.revokeObjectURL(url); }
   function handleImport(e){ const f=e.target.files?.[0]; if(!f) return; const fr=new FileReader(); fr.onload=()=>{ try{ setItems(hydrate(JSON.parse(String(fr.result)))); }catch{ alert('Invalid JSON'); } }; fr.readAsText(f); }
-  function handleAddQuick(){ setItems(prev=>[...prev, normalizeItem({ name:'New', amount:10, cycle:'monthly', intervalDays:30, nextDue:new Date().toISOString().slice(0,10), autopay:true })]); }
+  function handleAddQuick(){ setItems(prev=>[...prev, normalizeItem({ name:'New', category:'', amount:10, cycle:'monthly', intervalDays:30, nextDue:new Date().toISOString().slice(0,10), autopay:true })]); }
   function updateRow(id, patch){ setItems(prev => prev.map(p => p.id===id ? normalizeItem({...p, ...patch}) : p)); }
 
   return (
@@ -158,7 +165,7 @@ export default function SubscriptionBubbleTracker(){
           <div className="xl:col-span-3">
             {view==='bubbles' ? (
               <div ref={ref} className="relative h-[56vh] min-h-[420px] rounded-3xl bg-neutral-900/70 ring-1 ring-white/10 overflow-hidden">
-                {filtered.map(it => {
+                {sorted.map(it => {
                   const p = pos.get(it.id) || {x:60,y:60};
                   const r = (()=>{ const {min,max}=amountRange; const rMin=28, rMax=Math.min(140, Math.floor(Math.min(size.w,size.h)*0.28)); if(max===min) return (rMin+rMax)/2; return rMin + (rMax-rMin)*((it.amount-min)/(max-min)); })();
                   const selected = selectedIds.includes(it.id);
@@ -186,11 +193,11 @@ export default function SubscriptionBubbleTracker(){
               </div>
             ) : view==='shader' ? (
               <div ref={ref} className="relative h-[56vh] min-h-[420px] rounded-3xl bg-neutral-900/70 ring-1 ring-white/10 overflow-hidden">
-                <ShaderBubbleView items={filtered} pos={pos} size={size} amountToRadius={amountToRadius} />
+                <ShaderBubbleView items={sorted} pos={pos} size={size} amountToRadius={amountToRadius} />
               </div>
             ) : (
               <TableView
-                rows={filtered}
+                rows={sorted}
                 currency={currency}
                 lookahead={lookahead}
                 onChange={updateRow}
@@ -222,6 +229,7 @@ export default function SubscriptionBubbleTracker(){
                   <option value="due">Sort by Due</option>
                   <option value="amount">Sort by Amount</option>
                   <option value="name">Sort by Name</option>
+                  <option value="category">Sort by Category</option>
                 </select>
                 <input placeholder="Search" value={query} onChange={e=>setQuery(e.target.value)} className="col-span-2 px-3 py-2 rounded-xl bg-neutral-800 ring-1 ring-white/10 text-sm"/>
               </div>
@@ -245,7 +253,7 @@ export default function SubscriptionBubbleTracker(){
       {showForm && (
         <Modal onClose={()=>{ setShowForm(false); setEditing(null); }}>
           <EditForm
-            initial={editing || { name: '', amount: 10, cycle: 'monthly', intervalDays: 30, nextDue: new Date().toISOString().slice(0,10), autopay: true }}
+            initial={editing || { name: '', category: '', amount: 10, cycle: 'monthly', intervalDays: 30, nextDue: new Date().toISOString().slice(0,10), autopay: true }}
             onCancel={()=>{ setShowForm(false); setEditing(null); }}
             onSave={(f)=>handleSave(f)}
             currency={currency}
@@ -333,6 +341,9 @@ function EditForm({ initial, onCancel, onSave, currency }){
       <label className="col-span-2 text-sm">Name
         <input value={form.name} onChange={e=>set('name', e.target.value)} required className="mt-1 w-full px-3 py-2 rounded-xl bg-neutral-800 ring-1 ring-white/10"/>
       </label>
+      <label className="col-span-2 text-sm">Category
+        <input value={form.category||''} onChange={e=>set('category', e.target.value)} className="mt-1 w-full px-3 py-2 rounded-xl bg-neutral-800 ring-1 ring-white/10"/>
+      </label>
       <label className="text-sm">Amount ({currency})
         <input type="number" step="0.01" min="0" value={form.amount} onChange={e=>set('amount', parseFloat(e.target.value))} required className="mt-1 w-full px-3 py-2 rounded-xl bg-neutral-800 ring-1 ring-white/10"/>
       </label>
@@ -376,6 +387,7 @@ function TableView({ rows, currency, lookahead, onChange, onDelete, onMarkPaid, 
           <thead className="bg-neutral-900/80 sticky top-0">
             <tr className="text-neutral-400">
               <th className="text-left px-3 py-2">Name</th>
+              <th className="text-left px-3 py-2">Category</th>
               <th className="text-left px-3 py-2">Amount</th>
               <th className="text-left px-3 py-2">Cycle</th>
               <th className="text-left px-3 py-2">Interval</th>
@@ -394,6 +406,7 @@ function TableView({ rows, currency, lookahead, onChange, onDelete, onMarkPaid, 
               return (
                 <tr key={r.id} className="border-t border-white/5">
                   <td className="px-3 py-2"><input className="w-40 max-w-full px-2 py-1 rounded-lg bg-neutral-800 ring-1 ring-white/10" value={r.name} onChange={(e)=>onChange(r.id,{name:e.target.value})}/></td>
+                  <td className="px-3 py-2"><input className="w-32 px-2 py-1 rounded-lg bg-neutral-800 ring-1 ring-white/10" value={r.category||''} onChange={(e)=>onChange(r.id,{category:e.target.value})}/></td>
                   <td className="px-3 py-2"><input type="number" step="0.01" min="0" className="w-28 px-2 py-1 rounded-lg bg-neutral-800 ring-1 ring-white/10" value={r.amount} onChange={(e)=>onChange(r.id,{amount:parseFloat(e.target.value)})}/></td>
                   <td className="px-3 py-2">
                     <select className="px-2 py-1 rounded-lg bg-neutral-800 ring-1 ring-white/10" value={r.cycle} onChange={(e)=>onChange(r.id,{cycle:e.target.value})}>
