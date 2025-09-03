@@ -421,8 +421,11 @@ function Bubble({ x, y, r, color, item, currency, selected, onSelect, onDeselect
         selected ? onDeselect(e) : onSelect(e);
       }}
     >
-      <div className="absolute inset-0 rounded-full flex flex-col items-center justify-center text-center px-2 pointer-events-none">
-        <div className="text-[11px] md:text-xs font-medium leading-tight">{item.name}</div>
+      <div
+        className="absolute inset-0 rounded-full flex flex-col items-center justify-center text-center px-2 pointer-events-none"
+        style={{ transform: r > 80 ? 'translateY(4%)' : undefined }}
+      >
+        <div className="text-[11px] md:text-xs font-medium leading-tight whitespace-nowrap overflow-hidden text-ellipsis">{item.name}</div>
         <div className="text-base md:text-lg font-semibold">{formatCurrency(item.amount, currency)}</div>
         <div className={`text-[10px] md:text-xs ${overdue ? 'text-black/80' : 'text-black/70'} font-semibold`}>
           {item.daysLeft < 0 ? `${Math.abs(item.daysLeft)}d overdue` : `${item.daysLeft}d`}
