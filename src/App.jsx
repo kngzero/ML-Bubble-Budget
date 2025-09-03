@@ -337,8 +337,8 @@ export default function SubscriptionBubbleTracker(){
             )}
           </div>
 
-          <aside className="xl:col-span-1 flex flex-col gap-3">
-            <div className="rounded-3xl bg-neutral-100 dark:bg-neutral-900/70 ring-1 ring-black/10 dark:ring-white/10 p-4">
+          <aside className="xl:col-span-1 xl:sticky xl:top-4 flex flex-col gap-4">
+            <div className="rounded-3xl bg-neutral-100 dark:bg-neutral-900/70 ring-1 ring-black/10 dark:ring-white/10 p-6">
               <div className="flex items-center gap-2"><span className="text-sm text-neutral-600 dark:text-neutral-400">Currency</span>
                 <input value={currency} onChange={e=>setCurrency(e.target.value)} className="w-16 px-2 py-1 rounded-lg bg-white dark:bg-neutral-800 ring-1 ring-black/10 dark:ring-white/10"/>
               </div>
@@ -364,10 +364,10 @@ export default function SubscriptionBubbleTracker(){
               </div>
             </div>
 
-            <div className="rounded-3xl bg-neutral-100 dark:bg-neutral-900/70 ring-1 ring-black/10 dark:ring-white/10 p-4">
+            <div className="rounded-3xl bg-neutral-100 dark:bg-neutral-900/70 ring-1 ring-black/10 dark:ring-white/10 p-6">
               <h3 className="text-sm text-neutral-600 dark:text-neutral-400">Monthly equivalent</h3>
               <div className="mt-1 text-2xl font-semibold">{formatCurrency(monthlyTotal, currency)}</div>
-              <h3 className="mt-4 text-sm text-neutral-600 dark:text-neutral-400">Yearly total</h3>
+              <h3 className="mt-2 text-sm text-neutral-600 dark:text-neutral-400">Yearly total</h3>
               <div className="mt-1 text-2xl font-semibold">{formatCurrency(yearlyTotal, currency)}</div>
               <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-1">Yearly/weekly/custom amounts are converted to monthly estimates to help budget planning. Yearly total is derived from this estimate.</p>
             </div>
