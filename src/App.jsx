@@ -344,8 +344,18 @@ export default function SubscriptionBubbleTracker(){
               </div>
               <div className="mt-3">
                 <label className="text-sm text-neutral-700 dark:text-neutral-300">Lookahead window: <span className="font-medium">{lookahead} days</span></label>
-                <input type="range" min={7} max={90} value={lookahead} onChange={e=>setLookahead(Number(e.target.value))} className="w-full"/>
-                <ColorLegend />
+                <div className="space-y-1">
+                  <input
+                    type="range"
+                    min={7}
+                    max={90}
+                    value={lookahead}
+                    onChange={e=>setLookahead(Number(e.target.value))}
+                    className="w-full h-3 rounded-full"
+                    style={{background: 'linear-gradient(90deg, hsl(220 90% 58%), hsl(160 90% 58%), hsl(60 90% 58%), hsl(0 90% 50%))'}}
+                  />
+                  <ColorLegend />
+                </div>
               </div>
               <div className="mt-3 grid grid-cols-2 gap-2">
                 <select value={filter} onChange={e=>setFilter(e.target.value)} className="col-span-1 px-2 py-2 rounded-xl bg-white dark:bg-neutral-800 ring-1 ring-black/10 dark:ring-white/10 text-sm">
@@ -472,8 +482,11 @@ function BubbleToolbar({ count, onMarkPaid, onEdit, onDelete }) {
 
 function ColorLegend(){
   return (
-    <div className="mt-3">
-      <div className="h-3 rounded-full w-full" style={{background: 'linear-gradient(90deg, hsl(220 90% 58%), hsl(160 90% 58%), hsl(60 90% 58%), hsl(0 90% 50%))'}}/>
+    <div>
+      <div
+        className="h-3 w-full rounded-full"
+        style={{background: 'linear-gradient(90deg, hsl(220 90% 58%), hsl(160 90% 58%), hsl(60 90% 58%), hsl(0 90% 50%))'}}
+      />
       <div className="flex justify-between text-[10px] text-neutral-600 dark:text-neutral-400 mt-1"><span>Far</span><span>Near</span><span>Due</span><span>Overdue</span></div>
     </div>
   );
